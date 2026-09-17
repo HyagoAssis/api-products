@@ -1,9 +1,15 @@
 {
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-4711-8899-aabbccddeeff",
-    "name": "API Products - Auth (Breeze/Sanctum SPA)",
-    "description": "Testes de autenticacao do projeto api-products (Laravel Breeze - stack api, auth por cookie/sessao via Sanctum SPA).\n\nORDEM SUGERIDA:\n1. CSRF Cookie  (obrigatorio antes dos POST)\n2. Register     (cria usuario e ja loga via sessao)\n3. Get User     (deve retornar o usuario logado)\n4. Logout\n5. Login        (loga de novo com o mesmo usuario)\n6. Get User\n\nO pre-request no nivel da collection le o cookie XSRF-TOKEN do cookie jar do Postman e injeta em {{xsrf_token}}, usado no header X-XSRF-TOKEN.\n\nOBS: se os scripts nao conseguirem ler o cookie, adicione o dominio de {{base_url}} na allowlist de cookies do Postman (Cookies -> Domains Allowlist).",
+    "name": "API Products - Auth (Breeze/Sanctum SPA + Bearer)",
+    "description": "Testes de autenticacao e CRUD de produtos do projeto api-products (Laravel Breeze - stack api).\n\nAUTENTICACAO: as rotas aceitam os dois modos ao mesmo tempo:\n- SPA (cookie/sessao): rode '1. CSRF Cookie' + '2. Register' (ou '5. Login'). Usa Referer/Origin + X-XSRF-TOKEN.\n- Bearer token: rode '7. Create Token' para preencher {{api_token}}. A collection tem auth Bearer {{api_token}} no nivel raiz, entao TODAS as requests enviam Authorization: Bearer automaticamente quando o token estiver preenchido.\n\nO pre-request no nivel da collection le o cookie XSRF-TOKEN e injeta em {{xsrf_token}}, usado no header X-XSRF-TOKEN.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{api_token}}", "type": "string" }
+    ]
   },
   "variable": [
     { "key": "base_url", "value": "http://projeto.site" },
@@ -11,7 +17,8 @@
     { "key": "user_email", "value": "test@example.com" },
     { "key": "user_password", "value": "password" },
     { "key": "xsrf_token", "value": "" },
-    { "key": "api_token", "value": "" }
+    { "key": "api_token", "value": "" },
+    { "key": "product_id", "value": "" }
   ],
   "event": [
     {
@@ -36,6 +43,7 @@
     {
       "name": "1. CSRF Cookie",
       "request": {
+        "auth": { "type": "noauth" },
         "method": "GET",
         "header": [
           { "key": "Accept", "value": "application/json" }
@@ -101,6 +109,7 @@
         }
       ],
       "request": {
+        "auth": { "type": "noauth" },
         "method": "POST",
         "header": [
           { "key": "Accept", "value": "application/json" },
@@ -127,7 +136,7 @@
           { "key": "Origin", "value": "{{base_url}}" }
         ],
         "url": "{{base_url}}/api/user",
-        "description": "Retorna o usuario logado usando o cookie de sessao. Precisa de Referer/Origin para o Sanctum tratar como stateful."
+        "description": "Retorna o usuario logado. Funciona via sessao (cookie) ou via Bearer token (se {{api_token}} preenchido)."
       },
       "event": [
         {
@@ -145,6 +154,7 @@
     {
       "name": "4. Logout",
       "request": {
+        "auth": { "type": "noauth" },
         "method": "POST",
         "header": [
           { "key": "Accept", "value": "application/json" },
@@ -169,6 +179,7 @@
     {
       "name": "5. Login",
       "request": {
+        "auth": { "type": "noauth" },
         "method": "POST",
         "header": [
           { "key": "Accept", "value": "application/json" },
@@ -198,38 +209,7 @@
       ]
     },
     {
-      "name": "6. Forgot Password",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Accept", "value": "application/json" },
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "Referer", "value": "{{base_url}}" },
-          { "key": "Origin", "value": "{{base_url}}" },
-          { "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"email\": \"{{user_email}}\"\n}",
-          "options": { "raw": { "language": "json" } }
-        },
-        "url": "{{base_url}}/forgot-password",
-        "description": "Envia o email de reset (com MAIL_MAILER=log, cai em storage/logs/laravel.log)."
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('Status 200', () => pm.response.to.have.status(200));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "7. Create Token",
+      "name": "6. Create Token",
       "request": {
         "method": "POST",
         "header": [
@@ -245,7 +225,7 @@
           "options": { "raw": { "language": "json" } }
         },
         "url": "{{base_url}}/api/tokens/create",
-        "description": "Emite um token Bearer. Autentique-se antes (CSRF Cookie + Register/Login). O Test salva o token em {{api_token}}."
+        "description": "Emite um token Bearer. Autentique-se antes via sessao (CSRF Cookie + Register/Login). O Test salva o token em {{api_token}}, que passa a ser usado no Authorization Bearer de todas as requests."
       },
       "event": [
         {
@@ -261,6 +241,144 @@
               "}"
             ]
           }
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "description": "CRUD de produtos (rotas protegidas por auth:sanctum). Autentique-se por sessao (CSRF Cookie + Register/Login) ou por Bearer (Create Token). Com {{api_token}} preenchido, o Authorization Bearer herdado da collection ja autentica.",
+      "item": [
+        {
+          "name": "List Products",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Referer", "value": "{{base_url}}" },
+              { "key": "Origin", "value": "{{base_url}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/products?page=1&perPage=15&search=&category=&has_stock=&min_price=&max_price=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "products"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "perPage", "value": "15" },
+                { "key": "search", "value": "", "description": "Filtra por nome (like)" },
+                { "key": "category", "value": "", "description": "Filtra por categoria (match exato)" },
+                { "key": "has_stock", "value": "", "description": "true = apenas com estoque (stock > 0)" },
+                { "key": "min_price", "value": "", "description": "Preco minimo (>=)" },
+                { "key": "max_price", "value": "", "description": "Preco maximo (<=)" }
+              ]
+            },
+            "description": "Lista paginada. Parametros: page (default 1), perPage (default 15), search (nome), category (exato), has_stock (bool), min_price/max_price (faixa de preco)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Tem data (paginado)', () => pm.expect(pm.response.json()).to.have.property('data'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Referer", "value": "{{base_url}}" },
+              { "key": "Origin", "value": "{{base_url}}" },
+              { "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Produto de Teste\",\n  \"description\": \"Descricao do produto de teste\",\n  \"price\": 199.90,\n  \"category\": \"Categoria Teste\",\n  \"stock\": 10\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{base_url}}/api/v1/products",
+            "description": "Cria um produto. Retorna 201 Created. O Test salva o id retornado em {{product_id}} para uso no Show/Delete."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data.id) {",
+                  "  pm.collectionVariables.set('product_id', json.data.id);",
+                  "  console.log('product_id salvo:', json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Show Product",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Referer", "value": "{{base_url}}" },
+              { "key": "Origin", "value": "{{base_url}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/products/{{product_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "products", "{{product_id}}"]
+            },
+            "description": "Exibe um produto pelo id salvo em {{product_id}} (definido pelo Create Product)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Id confere', () => pm.expect(String(pm.response.json().data.id)).to.eql(pm.collectionVariables.get('product_id')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Product",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Referer", "value": "{{base_url}}" },
+              { "key": "Origin", "value": "{{base_url}}" },
+              { "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/products/{{product_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "products", "{{product_id}}"]
+            },
+            "description": "Remove o produto de {{product_id}}. Retorna 204 No Content."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
         }
       ]
     }

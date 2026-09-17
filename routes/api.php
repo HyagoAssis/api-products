@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ProductController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -21,5 +22,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
             'token' => $token->plainTextToken,
             'expires_at' => $token->accessToken->expires_at,
         ];
+    });
+
+    Route::prefix('v1')->group(function () {
+        Route::apiResource('products', ProductController::class)
+            ->only(['index', 'show', 'store', 'update', 'destroy']);
     });
 });
