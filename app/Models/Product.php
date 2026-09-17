@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Jobs\LogProductChangesJob;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -9,12 +10,38 @@ use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 
 /**
  * @method static ProductFactory factory($count = null, $state = [])
  * @method static Builder<static>|Product newModelQuery()
  * @method static Builder<static>|Product newQuery()
  * @method static Builder<static>|Product query()
+ *
+ * @property mixed $id
+ * @property string $name
+ * @property string $description
+ * @property numeric $price
+ * @property string $category
+ * @property int $stock
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ *
+ * @method static Builder<static>|Product filterCategory(string $category)
+ * @method static Builder<static>|Product filterHasStock()
+ * @method static Builder<static>|Product filterMaxPrice(string $maxPrice)
+ * @method static Builder<static>|Product filterMinPrice(string $minPrice)
+ * @method static Builder<static>|Product filterName(string $name)
+ * @method static Builder<static>|Product whereCategory($value)
+ * @method static Builder<static>|Product whereCreatedAt($value)
+ * @method static Builder<static>|Product whereDescription($value)
+ * @method static Builder<static>|Product whereId($value)
+ * @method static Builder<static>|Product whereName($value)
+ * @method static Builder<static>|Product wherePrice($value)
+ * @method static Builder<static>|Product whereStock($value)
+ * @method static Builder<static>|Product whereUpdatedAt($value)
+ *
  * @mixin \Eloquent
  */
 #[Table('products', 'id')]
@@ -23,6 +50,42 @@ class Product extends Model
 {
     /** @use HasFactory<ProductFactory> */
     use HasFactory;
+
+    /**
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        static::created(function (Product $product) {
+            $product->logChanges('CREATED', null, $product->getAttributes());
+        });
+
+        static::updated(function (Product $product) {
+            $changes = $product->getChanges();
+
+            $product->logChanges(
+                'UPDATED',
+                Arr::only($product->getOriginal(), array_keys($changes)),
+                $changes,
+            );
+        });
+
+        static::deleted(function (Product $product) {
+            $product->logChanges('DELETED', $product->getOriginal(), null);
+        });
+    }
+
+    public function logChanges($operation, $oldValues, $newValues): void
+    {
+        LogProductChangesJob::dispatch(
+            $this->getMorphClass(),
+            $this->id,
+            auth()->id(),
+            $operation,
+            $oldValues,
+            $newValues,
+        );
+    }
 
     /**
      * Get the attributes that should be cast.
