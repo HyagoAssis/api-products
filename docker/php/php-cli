@@ -1,0 +1,4 @@
+#!/bin/sh
+
+export PHP_INI_SCAN_DIR="/usr/local/etc/php/cli/conf.d:/usr/local/etc/php/conf.d"
+exec php.real "$@"

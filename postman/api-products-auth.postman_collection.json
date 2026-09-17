@@ -1,0 +1,268 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-4711-8899-aabbccddeeff",
+    "name": "API Products - Auth (Breeze/Sanctum SPA)",
+    "description": "Testes de autenticacao do projeto api-products (Laravel Breeze - stack api, auth por cookie/sessao via Sanctum SPA).\n\nORDEM SUGERIDA:\n1. CSRF Cookie  (obrigatorio antes dos POST)\n2. Register     (cria usuario e ja loga via sessao)\n3. Get User     (deve retornar o usuario logado)\n4. Logout\n5. Login        (loga de novo com o mesmo usuario)\n6. Get User\n\nO pre-request no nivel da collection le o cookie XSRF-TOKEN do cookie jar do Postman e injeta em {{xsrf_token}}, usado no header X-XSRF-TOKEN.\n\nOBS: se os scripts nao conseguirem ler o cookie, adicione o dominio de {{base_url}} na allowlist de cookies do Postman (Cookies -> Domains Allowlist).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://projeto.site" },
+    { "key": "user_name", "value": "Test User" },
+    { "key": "user_email", "value": "test@example.com" },
+    { "key": "user_password", "value": "password" },
+    { "key": "xsrf_token", "value": "" },
+    { "key": "api_token", "value": "" }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Le o cookie XSRF-TOKEN do jar e injeta em {{xsrf_token}} antes de cada request.",
+          "try {",
+          "  const jar = pm.cookies.jar();",
+          "  jar.get(pm.collectionVariables.get('base_url'), 'XSRF-TOKEN', (err, value) => {",
+          "    if (!err && value) {",
+          "      pm.collectionVariables.set('xsrf_token', decodeURIComponent(value));",
+          "    }",
+          "  });",
+          "} catch (e) { /* jar indisponivel: rode a request 'CSRF Cookie' primeiro */ }"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "1. CSRF Cookie",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "url": "{{base_url}}/sanctum/csrf-cookie",
+        "description": "Inicializa a sessao e seta os cookies XSRF-TOKEN e de sessao. Rode isto primeiro. O script de Test captura o XSRF-TOKEN e injeta em {{xsrf_token}} automaticamente."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 204', () => pm.response.to.have.status(204));",
+              "",
+              "function saveXsrf(value) {",
+              "  const token = decodeURIComponent(value);",
+              "  pm.collectionVariables.set('xsrf_token', token);",
+              "  console.log('XSRF token setado:', token);",
+              "}",
+              "",
+              "let xsrf = null;",
+              "try { xsrf = pm.cookies.get('XSRF-TOKEN'); } catch (e) { /* fora do escopo */ }",
+              "",
+              "if (xsrf) {",
+              "  saveXsrf(xsrf);",
+              "} else {",
+              "  try {",
+              "    const jar = pm.cookies.jar();",
+              "    jar.get(pm.collectionVariables.get('base_url'), 'XSRF-TOKEN', (err, value) => {",
+              "      if (!err && value) { saveXsrf(value); }",
+              "      else { console.warn('Nao consegui ler XSRF-TOKEN. Adicione o dominio de {{base_url}} na allowlist de cookies do Postman.'); }",
+              "    });",
+              "  } catch (e) {",
+              "    console.warn('Cookie jar indisponivel. Adicione o dominio de {{base_url}} na allowlist de cookies do Postman.');",
+              "  }",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Register",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set('user_email', 'user_' + Date.now() + '@example.com');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 204 (registrado e autenticado)', () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Referer", "value": "{{base_url}}" },
+          { "key": "Origin", "value": "{{base_url}}" },
+          { "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{user_name}}\",\n  \"email\": \"{{user_email}}\",\n  \"password\": \"{{user_password}}\",\n  \"password_confirmation\": \"{{user_password}}\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{base_url}}/register"
+      }
+    },
+    {
+      "name": "3. Get User (autenticado)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Referer", "value": "{{base_url}}" },
+          { "key": "Origin", "value": "{{base_url}}" }
+        ],
+        "url": "{{base_url}}/api/user",
+        "description": "Retorna o usuario logado usando o cookie de sessao. Precisa de Referer/Origin para o Sanctum tratar como stateful."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Tem email', () => pm.expect(pm.response.json()).to.have.property('email'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Logout",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Referer", "value": "{{base_url}}" },
+          { "key": "Origin", "value": "{{base_url}}" },
+          { "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }
+        ],
+        "url": "{{base_url}}/logout"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 204', () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Referer", "value": "{{base_url}}" },
+          { "key": "Origin", "value": "{{base_url}}" },
+          { "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{user_email}}\",\n  \"password\": \"{{user_password}}\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{base_url}}/login",
+        "description": "Loga com o ultimo usuario registrado ({{user_email}}). Rode 'CSRF Cookie' antes se a sessao expirou."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 204', () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Forgot Password",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Referer", "value": "{{base_url}}" },
+          { "key": "Origin", "value": "{{base_url}}" },
+          { "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{user_email}}\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{base_url}}/forgot-password",
+        "description": "Envia o email de reset (com MAIL_MAILER=log, cai em storage/logs/laravel.log)."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Create Token",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Referer", "value": "{{base_url}}" },
+          { "key": "Origin", "value": "{{base_url}}" },
+          { "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"token_name\": \"meu-app\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{base_url}}/api/tokens/create",
+        "description": "Emite um token Bearer. Autentique-se antes (CSRF Cookie + Register/Login). O Test salva o token em {{api_token}}."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "if (json && json.token) {",
+              "  pm.collectionVariables.set('api_token', json.token);",
+              "  console.log('Bearer token salvo em {{api_token}}:', json.token);",
+              "}"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
