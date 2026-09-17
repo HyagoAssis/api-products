@@ -1,0 +1,51 @@
+#!/bin/sh
+set -e
+
+COMMAND="${1:-}"
+APP_CONTAINER="api-products"
+
+##########################################
+
+case "$COMMAND" in
+  up)
+    docker compose up -d
+    ;;
+  down)
+    docker compose down
+    ;;
+  prune)
+    docker compose down --rmi all --volumes --remove-orphans
+    ;;
+  bash)
+    shift
+    if [ "$#" -eq 0 ]; then
+      docker exec -it "$APP_CONTAINER" bash
+    else
+      docker exec -it "$APP_CONTAINER" bash -c "$*"
+    fi
+    ;;
+  test)
+    shift
+    docker exec -it "$APP_CONTAINER" php artisan test --parallel "$@"
+    ;;
+  pint)
+    shift
+    docker exec -it "$APP_CONTAINER" ./vendor/bin/pint "$@"
+    ;;
+  artisan)
+    shift
+    docker exec -it "$APP_CONTAINER" php artisan "$@"
+    ;;
+  *)
+    echo "Docker Scripts"
+    echo "Uso:"
+    echo " $0 up                 → sobe todos os containers (docker compose up -d)"
+    echo " $0 down               → derruba todos os containers"
+    echo " $0 prune              → derruba containers + imagens + volumes do projeto"
+    echo " $0 bash [cmd]         → terminal do container app; com args, executa o comando (ex.: $0 bash ls -la)"
+    echo " $0 test [args]        → roda os testes em paralelo (php artisan test --parallel)"
+    echo " $0 pint [args]        → roda o Pint (formata o codigo)"
+    echo " $0 artisan <cmd>      → roda um comando artisan (ex.: $0 artisan migrate)"
+    exit 1
+    ;;
+esac
