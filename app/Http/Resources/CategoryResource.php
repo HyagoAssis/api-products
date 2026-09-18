@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources;
 
-use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -10,14 +9,10 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * @property mixed $id
  * @property mixed $name
  * @property mixed $description
- * @property mixed $price
- * @property mixed $category_id
- * @property mixed $stock
  * @property mixed $created_at
  * @property mixed $updated_at
- * @property-read Category|null $category
  */
-class ProductResource extends JsonResource
+class CategoryResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -30,10 +25,6 @@ class ProductResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'description' => $this->description,
-            'price' => $this->price,
-            'category_id' => $this->category_id,
-            'category' => CategoryResource::make($this->whenLoaded('category')),
-            'stock' => $this->stock,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

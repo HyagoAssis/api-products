@@ -16,8 +16,8 @@ it('should be able to show a product with the correct data', function () {
         ->assertJsonPath('data.id', $product->id)
         ->assertJsonPath('data.name', $product->name)
         ->assertJsonPath('data.description', $product->description)
-        ->assertJsonPath('data.price', (string) $product->price)
-        ->assertJsonPath('data.category', $product->category)
+        ->assertJsonPath('data.price', fn ($price) => (float) $price === (float) $product->price)
+        ->assertJsonPath('data.category_id', $product->category_id)
         ->assertJsonPath('data.stock', $product->stock);
 });
 

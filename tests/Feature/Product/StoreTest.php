@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Category;
 use App\Models\User;
 use Laravel\Sanctum\Sanctum;
 
@@ -11,11 +12,13 @@ it('should be able to store a new product', function () {
 
     Sanctum::actingAs($user);
 
+    $category = Category::factory()->create();
+
     $response = postJson(route('products.store'), [
         'name' => 'Produto Teste',
         'description' => 'Descricao do produto teste',
         'price' => '199.90',
-        'category' => 'Categoria Teste',
+        'category_id' => $category->id,
         'stock' => 10,
     ]);
 
@@ -24,7 +27,7 @@ it('should be able to store a new product', function () {
     $response->assertJsonPath('data.name', 'Produto Teste')
         ->assertJsonPath('data.description', 'Descricao do produto teste')
         ->assertJsonPath('data.price', '199.90')
-        ->assertJsonPath('data.category', 'Categoria Teste')
+        ->assertJsonPath('data.category_id', $category->id)
         ->assertJsonPath('data.stock', 10);
 
     assertDatabaseHas('products', [
@@ -32,7 +35,7 @@ it('should be able to store a new product', function () {
         'name' => 'Produto Teste',
         'description' => 'Descricao do produto teste',
         'price' => '199.90',
-        'category' => 'Categoria Teste',
+        'category_id' => $category->id,
         'stock' => 10,
     ]);
 });
@@ -42,7 +45,7 @@ it('should not be able to store a product when unauthenticated', function () {
         'name' => 'Produto Teste',
         'description' => 'Descricao do produto teste',
         'price' => '199.90',
-        'category' => 'Categoria Teste',
+        'category_id' => Category::factory()->create()->id,
         'stock' => 10,
     ])->assertUnauthorized();
 });
@@ -102,22 +105,22 @@ describe('validation rules', function () {
         ])->assertJsonValidationErrors(['price' => 'decimal']);
     });
 
-    test('category:required', function () {
+    test('category_id:required', function () {
         postJson(route('products.store'), [
             'name' => 'Produto Teste',
-        ])->assertJsonValidationErrors(['category' => 'required']);
+        ])->assertJsonValidationErrors(['category_id' => 'required']);
     });
 
-    test('category:string', function () {
+    test('category_id:integer', function () {
         postJson(route('products.store'), [
-            'category' => ['array'],
-        ])->assertJsonValidationErrors(['category' => 'string']);
+            'category_id' => 'not-an-integer',
+        ])->assertJsonValidationErrors(['category_id' => 'integer']);
     });
 
-    test('category:max', function () {
+    test('category_id:exists', function () {
         postJson(route('products.store'), [
-            'category' => str_repeat('a', 256),
-        ])->assertJsonValidationErrors(['category' => '255']);
+            'category_id' => 999999,
+        ])->assertJsonValidationErrors(['category_id' => 'invalid']);
     });
 
     test('stock:integer', function () {

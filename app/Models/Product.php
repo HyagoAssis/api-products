@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 
@@ -23,17 +24,17 @@ use Illuminate\Support\Carbon;
  * @property string $name
  * @property string $description
  * @property numeric $price
- * @property string $category
+ * @property int $category_id
  * @property int $stock
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  *
- * @method static Builder<static>|Product filterCategory(string $category)
+ * @method static Builder<static>|Product filterCategory(int $categoryId)
  * @method static Builder<static>|Product filterHasStock()
  * @method static Builder<static>|Product filterMaxPrice(string $maxPrice)
  * @method static Builder<static>|Product filterMinPrice(string $minPrice)
  * @method static Builder<static>|Product filterName(string $name)
- * @method static Builder<static>|Product whereCategory($value)
+ * @method static Builder<static>|Product whereCategoryId($value)
  * @method static Builder<static>|Product whereCreatedAt($value)
  * @method static Builder<static>|Product whereDescription($value)
  * @method static Builder<static>|Product whereId($value)
@@ -45,7 +46,7 @@ use Illuminate\Support\Carbon;
  * @mixin \Eloquent
  */
 #[Table('products', 'id')]
-#[Fillable('name', 'description', 'price', 'category', 'stock')]
+#[Fillable('name', 'description', 'price', 'category_id', 'stock')]
 class Product extends Model
 {
     /** @use HasFactory<ProductFactory> */
@@ -95,8 +96,19 @@ class Product extends Model
     protected function casts(): array
     {
         return [
+            'category_id' => 'integer',
             'stock' => 'integer',
         ];
+    }
+
+    /**
+     * Get the category that owns the product.
+     *
+     * @return BelongsTo<Category, $this>
+     */
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
     }
 
     /**
@@ -112,9 +124,9 @@ class Product extends Model
      * Filter products by category.
      */
     #[Scope]
-    protected function filterCategory(Builder $query, string $category): void
+    protected function filterCategory(Builder $query, int $categoryId): void
     {
-        $query->where('category', $category);
+        $query->where('category_id', $categoryId);
     }
 
     /**

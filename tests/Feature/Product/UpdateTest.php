@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
 use Laravel\Sanctum\Sanctum;
@@ -11,12 +12,13 @@ it('should be able to update a product', function () {
     Sanctum::actingAs(User::factory()->create());
 
     $product = Product::factory()->create();
+    $category = Category::factory()->create();
 
     $response = putJson(route('products.update', $product), [
         'name' => 'Produto Atualizado',
         'description' => 'Descricao atualizada',
         'price' => '299.90',
-        'category' => 'Categoria Atualizada',
+        'category_id' => $category->id,
         'stock' => 42,
     ]);
 
@@ -25,7 +27,7 @@ it('should be able to update a product', function () {
         ->assertJsonPath('data.name', 'Produto Atualizado')
         ->assertJsonPath('data.description', 'Descricao atualizada')
         ->assertJsonPath('data.price', '299.90')
-        ->assertJsonPath('data.category', 'Categoria Atualizada')
+        ->assertJsonPath('data.category_id', $category->id)
         ->assertJsonPath('data.stock', 42);
 
     assertDatabaseHas('products', [
@@ -33,7 +35,7 @@ it('should be able to update a product', function () {
         'name' => 'Produto Atualizado',
         'description' => 'Descricao atualizada',
         'price' => '299.90',
-        'category' => 'Categoria Atualizada',
+        'category_id' => $category->id,
         'stock' => 42,
     ]);
 });
@@ -108,16 +110,16 @@ describe('validation rules', function () {
         ])->assertJsonValidationErrors(['price' => 'decimal']);
     });
 
-    test('category:string', function () {
+    test('category_id:integer', function () {
         putJson(route('products.update', $this->product), [
-            'category' => ['array'],
-        ])->assertJsonValidationErrors(['category' => 'string']);
+            'category_id' => 'not-an-integer',
+        ])->assertJsonValidationErrors(['category_id' => 'integer']);
     });
 
-    test('category:max', function () {
+    test('category_id:exists', function () {
         putJson(route('products.update', $this->product), [
-            'category' => str_repeat('a', 256),
-        ])->assertJsonValidationErrors(['category' => '255']);
+            'category_id' => 999999,
+        ])->assertJsonValidationErrors(['category_id' => 'invalid']);
     });
 
     test('stock:integer', function () {

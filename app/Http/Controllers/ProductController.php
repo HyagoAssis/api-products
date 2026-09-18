@@ -5,26 +5,30 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Product\IndexRequest;
 use App\Http\Requests\Product\StoreRequest;
 use App\Http\Requests\Product\UpdateRequest;
-use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Http\Resources\Json\ResourceCollection;
 use Illuminate\Http\Response;
 use Symfony\Component\HttpFoundation\Response as ResponseAlias;
+use Throwable;
 
 class ProductController extends Controller
 {
     /**
      * Display a listing of the resource.
+     *
+     * @throws Throwable
      */
-    public function index(IndexRequest $request): AnonymousResourceCollection
+    public function index(IndexRequest $request): ResourceCollection
     {
         $products = Product::query()
+            ->with(['category'])
             ->when($request->input('search'), function ($query, string $search) {
                 $query->filterName($search);
             })
-            ->when($request->input('category'), function ($query, string $category) {
-                $query->filterCategory($category);
+            ->when($request->input('category_id'), function ($query, string $categoryId) {
+                $query->filterCategory((int) $categoryId);
             })
             ->when($request->boolean('has_stock'), function ($query) {
                 $query->filterHasStock();
@@ -40,7 +44,7 @@ class ProductController extends Controller
                 page: $request->integer('page'),
             );
 
-        return ProductResource::collection($products);
+        return $products->toResourceCollection();
     }
 
     /**
@@ -50,7 +54,9 @@ class ProductController extends Controller
     {
         $product = Product::create($request->validated());
 
-        return (new ProductResource($product))
+        $product->load('category');
+
+        return $product->toResource()
             ->response()
             ->setStatusCode(ResponseAlias::HTTP_CREATED);
     }
@@ -58,19 +64,23 @@ class ProductController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Product $product): ProductResource
+    public function show(Product $product): JsonResource
     {
-        return new ProductResource($product);
+        $product->load('category');
+
+        return $product->toResource();
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateRequest $request, Product $product): ProductResource
+    public function update(UpdateRequest $request, Product $product): JsonResource
     {
         $product->update($request->validated());
 
-        return new ProductResource($product);
+        $product->load('category');
+
+        return $product->toResource();
     }
 
     /**

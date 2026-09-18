@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Product;
+namespace App\Http\Requests\Category;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -29,7 +29,7 @@ class IndexRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array|string>
      */
     public function rules(): array
     {
@@ -37,10 +37,6 @@ class IndexRequest extends FormRequest
             'page' => ['integer', 'min:1'],
             'perPage' => ['integer', 'min:1'],
             'search' => ['nullable', 'string'],
-            'category_id' => ['nullable', 'integer'],
-            'has_stock' => ['nullable', 'boolean'],
-            'min_price' => ['nullable', 'numeric'],
-            'max_price' => ['nullable', 'numeric'],
         ];
     }
 }

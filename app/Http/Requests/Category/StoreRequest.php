@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Product;
+namespace App\Http\Requests\Category;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -24,10 +24,7 @@ class StoreRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'description' => ['required', 'string', 'max:1000'],
-            'price' => ['required', 'decimal:0,2'],
-            'category_id' => ['required', 'integer', 'exists:categories,id'],
-            'stock' => ['nullable', 'integer'],
+            'description' => ['nullable', 'string', 'max:1000'],
         ];
     }
 }

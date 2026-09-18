@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
 use Laravel\Sanctum\Sanctum;
@@ -16,8 +17,8 @@ it('should be able to list products with the correct data', function () {
         ->assertJsonPath('data.0.id', $product->id)
         ->assertJsonPath('data.0.name', $product->name)
         ->assertJsonPath('data.0.description', $product->description)
-        ->assertJsonPath('data.0.price', (string) $product->price)
-        ->assertJsonPath('data.0.category', $product->category)
+        ->assertJsonPath('data.0.price', fn ($price) => (float) $price === (float) $product->price)
+        ->assertJsonPath('data.0.category_id', $product->category_id)
         ->assertJsonPath('data.0.stock', $product->stock);
 });
 
@@ -51,10 +52,13 @@ it('should filter products by the search term', function () {
 it('should filter products by category', function () {
     Sanctum::actingAs(User::factory()->create());
 
-    $matching = Product::factory()->create(['category' => 'Eletronicos']);
-    Product::factory()->create(['category' => 'Moveis']);
+    $eletronicos = Category::factory()->create();
+    $moveis = Category::factory()->create();
 
-    $response = getJson(route('products.index', ['category' => 'Eletronicos']));
+    $matching = Product::factory()->create(['category_id' => $eletronicos->id]);
+    Product::factory()->create(['category_id' => $moveis->id]);
+
+    $response = getJson(route('products.index', ['category_id' => $eletronicos->id]));
 
     $response->assertSuccessful()
         ->assertJsonCount(1, 'data')
@@ -123,6 +127,18 @@ it('should filter products within a price range', function () {
     $response->assertSuccessful()
         ->assertJsonCount(1, 'data')
         ->assertJsonPath('data.0.id', $inRange->id);
+});
+
+it('should return the category relation for each product', function () {
+    Sanctum::actingAs(User::factory()->create());
+
+    $category = Category::factory()->create();
+    Product::factory()->create(['category_id' => $category->id]);
+
+    getJson(route('products.index'))
+        ->assertSuccessful()
+        ->assertJsonPath('data.0.category.id', $category->id)
+        ->assertJsonPath('data.0.category.name', $category->name);
 });
 
 it('should not be able to list products when unauthenticated', function () {
