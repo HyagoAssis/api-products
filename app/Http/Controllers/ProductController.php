@@ -6,43 +6,30 @@ use App\Http\Requests\Product\IndexRequest;
 use App\Http\Requests\Product\StoreRequest;
 use App\Http\Requests\Product\UpdateRequest;
 use App\Models\Product;
+use App\Support\Search\ElasticsearchHelper;
+use App\Support\Search\ProductSearchParams;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 use Illuminate\Http\Response;
 use Symfony\Component\HttpFoundation\Response as ResponseAlias;
-use Throwable;
 
 class ProductController extends Controller
 {
     /**
      * Display a listing of the resource.
      *
-     * @throws Throwable
+     * @throws \Throwable
      */
     public function index(IndexRequest $request): ResourceCollection
     {
-        $products = Product::query()
-            ->with(['category'])
-            ->when($request->input('search'), function ($query, string $search) {
-                $query->filterName($search);
-            })
-            ->when($request->input('category_id'), function ($query, string $categoryId) {
-                $query->filterCategory((int) $categoryId);
-            })
-            ->when($request->boolean('has_stock'), function ($query) {
-                $query->filterHasStock();
-            })
-            ->when($request->input('min_price'), function ($query, string $minPrice) {
-                $query->filterMinPrice($minPrice);
-            })
-            ->when($request->input('max_price'), function ($query, string $maxPrice) {
-                $query->filterMaxPrice($maxPrice);
-            })
-            ->paginate(
-                perPage: $request->integer('perPage'),
-                page: $request->integer('page'),
-            );
+        $params = ProductSearchParams::fromRequest($request);
+
+        $products = Product::searchQuery(ElasticsearchHelper::buildQuery($params))
+            ->trackTotalHits(true)
+            ->load(['category'])
+            ->paginate($params->perPage, 'page', $params->page)
+            ->onlyModels();
 
         return $products->toResourceCollection();
     }

@@ -4,10 +4,12 @@ namespace App\Models;
 
 use App\Jobs\LogProductChangesJob;
 use Database\Factories\ProductFactory;
+use Elastic\ScoutDriverPlus\Searchable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -50,7 +52,7 @@ use Illuminate\Support\Carbon;
 class Product extends Model
 {
     /** @use HasFactory<ProductFactory> */
-    use HasFactory;
+    use HasFactory, Searchable;
 
     /**
      * The "booted" method of the model.
@@ -99,6 +101,38 @@ class Product extends Model
             'category_id' => 'integer',
             'stock' => 'integer',
         ];
+    }
+
+    /**
+     * Get the indexable data array for the model.
+     *
+     * @return array<string, mixed>
+     */
+    public function toSearchableArray(): array
+    {
+        return [
+            'id' => (int) $this->id,
+            'name' => $this->name,
+            'description' => $this->description,
+            'category_id' => $this->category_id,
+            'category' => [
+                'name' => $this->category?->name,
+            ],
+            'price' => (float) $this->price,
+            'stock' => $this->stock,
+            'created_at' => $this->created_at?->toAtomString(),
+        ];
+    }
+
+    /**
+     * Eager load the category relation when building the search index.
+     *
+     * @param  Collection<int, Product>  $models
+     * @return Collection<int, Product>
+     */
+    public function makeSearchableUsing(Collection $models): Collection
+    {
+        return $models->load('category');
     }
 
     /**

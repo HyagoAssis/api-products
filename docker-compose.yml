@@ -33,6 +33,7 @@ services:
     depends_on:
       - postgres
       - redis
+      - elasticsearch
     volumes:
       - ./:/var/www/html
     networks:
@@ -63,13 +64,44 @@ services:
     image: redis:7.4-alpine
     container_name: api-products-redis
     command: [ "redis-server", "--appendonly", "yes" ]
+    networks:
+      - app-network
+
+  # ─────────────────────────────
+  # Elasticsearch
+  # ─────────────────────────────
+  elasticsearch:
+    image: elasticsearch:9.1.2
+    container_name: api-products-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
     ports:
-      - "6379:6379"
+      - "9200:9200"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - app-network
+
+  # ─────────────────────────────
+  # Kibana
+  # ─────────────────────────────
+  kibana:
+    image: kibana:9.1.2
+    container_name: api-products-kibana
+    depends_on:
+      - elasticsearch
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
     networks:
       - app-network
 
 volumes:
   postgres-data:
+  elasticsearch-data:
 
 networks:
   app-network:

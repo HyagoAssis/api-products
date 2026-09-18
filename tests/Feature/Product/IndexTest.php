@@ -3,9 +3,36 @@
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
+use Elastic\Client\ClientBuilderInterface;
+use Elastic\Elasticsearch\Client;
 use Laravel\Sanctum\Sanctum;
 
 use function Pest\Laravel\getJson;
+
+function elasticClient(): Client
+{
+    return app(ClientBuilderInterface::class)->default();
+}
+
+beforeEach(function () {
+    config([
+        'scout.driver' => 'elastic',
+        'elastic.scout_driver.refresh_documents' => true,
+    ]);
+
+    try {
+        elasticClient()->info();
+    } catch (Throwable $e) {
+        $this->markTestSkipped('Elasticsearch indisponivel: '.$e->getMessage());
+    }
+
+    // Isola o indice entre os testes.
+    try {
+        elasticClient()->indices()->delete(['index' => (new Product)->searchableAs()]);
+    } catch (Throwable) {
+        // O indice ainda nao existe.
+    }
+});
 
 it('should be able to list products with the correct data', function () {
     Sanctum::actingAs(User::factory()->create());

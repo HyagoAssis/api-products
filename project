@@ -36,6 +36,10 @@ case "$COMMAND" in
     shift
     docker exec -it "$APP_CONTAINER" php artisan "$@"
     ;;
+  create-envs)
+    shift
+    ./scripts/create_envs.sh "$@"
+    ;;
   *)
     echo "Docker Scripts"
     echo "Uso:"
@@ -46,6 +50,7 @@ case "$COMMAND" in
     echo " $0 test [args]        → roda os testes em paralelo (php artisan test --parallel)"
     echo " $0 pint [args]        → roda o Pint (formata o codigo)"
     echo " $0 artisan <cmd>      → roda um comando artisan (ex.: $0 artisan migrate)"
+    echo " $0 create-envs [uid] [gid] → cria o .env a partir do .env.example e define UID/GID"
     exit 1
     ;;
 esac

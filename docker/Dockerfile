@@ -8,7 +8,7 @@ ARG GID=1000
 # ─────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git unzip zip curl \
-    procps libfcgi-bin \
+    procps \
     supervisor \
     postgresql-client \
     libpng-dev libonig-dev libxml2-dev libzip-dev libjpeg-dev libfreetype6-dev \
@@ -50,13 +50,7 @@ RUN apt-get autoremove -y && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # ─────────────────────────────
-# 7. Healthcheck do PHP-FPM
-# ─────────────────────────────
-COPY docker/php/php-fpm-healthcheck /usr/local/bin/php-fpm-healthcheck
-RUN chmod +x /usr/local/bin/php-fpm-healthcheck
-
-# ─────────────────────────────
-# 8. Configuração do php.ini (development como base)
+# 7. Configuração do php.ini (development como base)
 # ─────────────────────────────
 RUN for INI in "$PHP_INI_DIR/php.ini-development" "$PHP_INI_DIR/php.ini-production"; do \
       sed -i \
@@ -78,10 +72,9 @@ RUN for INI in "$PHP_INI_DIR/php.ini-development" "$PHP_INI_DIR/php.ini-producti
 COPY docker/php/opcache.ini $PHP_INI_DIR/conf.d/opcache.ini
 
 # ─────────────────────────────
-# 9. Ajuste do pool FPM (status + tuning)
+# 8. Ajuste do pool FPM (tuning)
 # ─────────────────────────────
 RUN { \
-      echo 'pm.status_path = /status'; \
       echo 'pm = dynamic'; \
       echo 'pm.max_children = 20'; \
       echo 'pm.start_servers = 10'; \
@@ -91,7 +84,7 @@ RUN { \
     } >> /usr/local/etc/php-fpm.d/zz-docker.conf
 
 # ─────────────────────────────
-# 10. Wrapper do php CLI (carrega cli.ini)
+# 9. Wrapper do php CLI (carrega cli.ini)
 # ─────────────────────────────
 COPY docker/php/cli.ini /usr/local/etc/php/cli/conf.d/99-cli.ini
 RUN mv /usr/local/bin/php /usr/local/bin/php.real
@@ -99,7 +92,7 @@ COPY docker/php/php-cli /usr/local/bin/php
 RUN chmod +x /usr/local/bin/php
 
 # ─────────────────────────────
-# 11. Usuário www sincronizado com UID/GID do host
+# 10. Usuário www sincronizado com UID/GID do host
 # ─────────────────────────────
 RUN if getent group ${GID}; then \
       group_name=$(getent group ${GID} | cut -d: -f1); \
@@ -115,16 +108,13 @@ RUN if getent group ${GID}; then \
 WORKDIR /var/www/html
 
 # ─────────────────────────────
-# 12. Entrypoint + Supervisor (php-fpm + horizon)
+# 11. Entrypoint + Supervisor (php-fpm + horizon)
 # ─────────────────────────────
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 COPY docker/supervisord.conf /usr/local/supervisord.conf
 
 USER www
-
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD php-fpm-healthcheck || exit 1
 
 EXPOSE 9000
 

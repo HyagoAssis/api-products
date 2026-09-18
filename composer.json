@@ -7,9 +7,11 @@
     "license": "MIT",
     "require": {
         "php": "^8.3",
+        "babenkoivan/elastic-scout-driver-plus": "^7.0",
         "laravel/framework": "^13.17",
         "laravel/horizon": "^5.49",
         "laravel/sanctum": "^4.0",
+        "laravel/scout": "^11.7",
         "laravel/tinker": "^3.0",
         "predis/predis": "^3.6"
     },

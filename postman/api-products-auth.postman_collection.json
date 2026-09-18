@@ -1,8 +1,8 @@
 {
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-4711-8899-aabbccddeeff",
-    "name": "API Products - Auth (Breeze/Sanctum SPA + Bearer)",
-    "description": "Testes de autenticacao e CRUD de produtos do projeto api-products (Laravel Breeze - stack api).\n\nAUTENTICACAO: as rotas aceitam os dois modos ao mesmo tempo:\n- SPA (cookie/sessao): rode '1. CSRF Cookie' + '2. Register' (ou '5. Login'). Usa Referer/Origin + X-XSRF-TOKEN.\n- Bearer token: rode '7. Create Token' para preencher {{api_token}}. A collection tem auth Bearer {{api_token}} no nivel raiz, entao TODAS as requests enviam Authorization: Bearer automaticamente quando o token estiver preenchido.\n\nO pre-request no nivel da collection le o cookie XSRF-TOKEN e injeta em {{xsrf_token}}, usado no header X-XSRF-TOKEN.",
+    "name": "API Products",
+    "description": "Testes de autenticacao e CRUD de produtos do projeto api-products.\n\nAUTENTICACAO: as rotas aceitam os dois modos ao mesmo tempo:\n- SPA (cookie/sessao): rode '1. CSRF Cookie' + '2. Register' (ou '5. Login'). Usa Referer/Origin + X-XSRF-TOKEN.\n- Bearer token: rode '7. Create Token' para preencher {{api_token}}. A collection tem auth Bearer {{api_token}} no nivel raiz, entao TODAS as requests enviam Authorization: Bearer automaticamente quando o token estiver preenchido.\n\nO pre-request no nivel da collection le o cookie XSRF-TOKEN e injeta em {{xsrf_token}}, usado no header X-XSRF-TOKEN.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
