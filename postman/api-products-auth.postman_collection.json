@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-4711-8899-aabbccddeeff",
     "name": "API Products",
-    "description": "Testes de autenticacao e CRUD de produtos do projeto api-products.\n\nAUTENTICACAO: as rotas aceitam os dois modos ao mesmo tempo:\n- SPA (cookie/sessao): rode '1. CSRF Cookie' + '2. Register' (ou '5. Login'). Usa Referer/Origin + X-XSRF-TOKEN.\n- Bearer token: rode '7. Create Token' para preencher {{api_token}}. A collection tem auth Bearer {{api_token}} no nivel raiz, entao TODAS as requests enviam Authorization: Bearer automaticamente quando o token estiver preenchido.\n\nO pre-request no nivel da collection le o cookie XSRF-TOKEN e injeta em {{xsrf_token}}, usado no header X-XSRF-TOKEN.",
+    "description": "Testes de autenticacao e CRUD de produtos do projeto api-products.\n\nAUTENTICACAO: as rotas protegidas aceitam os dois modos ao mesmo tempo:\n- SPA (cookie/sessao): rode '1. CSRF Cookie' + '2. Register' (ou '5. Login'). Usa Referer/Origin + X-XSRF-TOKEN.\n- Bearer token: rode '6. Create Token'. Ela usa HTTP Basic ({{user_email}}:{{user_password}}) contra POST /api/token/create (rota publica, nao precisa de sessao/CSRF) e o Test salva a resposta em {{api_token}}. A collection tem auth Bearer {{api_token}} no nivel raiz, entao TODAS as requests enviam Authorization: Bearer automaticamente quando o token estiver preenchido.\n\nO pre-request no nivel da collection le o cookie XSRF-TOKEN e injeta em {{xsrf_token}}, usado no header X-XSRF-TOKEN.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -95,7 +95,8 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.collectionVariables.set('user_email', 'user_' + Date.now() + '@example.com');"
+              "// Email unico apenas para este Register (escopo de request), sem sobrescrever {{user_email}}.",
+              "pm.variables.set('register_email', 'user_' + Date.now() + '@example.com');"
             ]
           }
         },
@@ -121,7 +122,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"name\": \"{{user_name}}\",\n  \"email\": \"{{user_email}}\",\n  \"password\": \"{{user_password}}\",\n  \"password_confirmation\": \"{{user_password}}\"\n}",
+          "raw": "{\n  \"name\": \"{{user_name}}\",\n  \"email\": \"{{register_email}}\",\n  \"password\": \"{{user_password}}\",\n  \"password_confirmation\": \"{{user_password}}\"\n}",
           "options": { "raw": { "language": "json" } }
         },
         "url": "{{base_url}}/register"
@@ -195,7 +196,7 @@
           "options": { "raw": { "language": "json" } }
         },
         "url": "{{base_url}}/login",
-        "description": "Loga com o ultimo usuario registrado ({{user_email}}). Rode 'CSRF Cookie' antes se a sessao expirou."
+        "description": "Loga com o usuario do seed ({{user_email}} / {{user_password}}). Rode 'CSRF Cookie' antes se a sessao expirou."
       },
       "event": [
         {
@@ -212,21 +213,25 @@
     {
       "name": "6. Create Token",
       "request": {
+        "auth": {
+          "type": "basic",
+          "basic": [
+            { "key": "username", "value": "{{user_email}}", "type": "string" },
+            { "key": "password", "value": "{{user_password}}", "type": "string" }
+          ]
+        },
         "method": "POST",
         "header": [
           { "key": "Accept", "value": "application/json" },
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "Referer", "value": "{{base_url}}" },
-          { "key": "Origin", "value": "{{base_url}}" },
-          { "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }
+          { "key": "Content-Type", "value": "application/json" }
         ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"token_name\": \"meu-app\"\n}",
           "options": { "raw": { "language": "json" } }
         },
-        "url": "{{base_url}}/api/tokens/create",
-        "description": "Emite um token Bearer. Autentique-se antes via sessao (CSRF Cookie + Register/Login). O Test salva o token em {{api_token}}, que passa a ser usado no Authorization Bearer de todas as requests."
+        "url": "{{base_url}}/api/token/create",
+        "description": "Emite um token Bearer via HTTP Basic. O Postman monta o header Authorization: Basic base64({{user_email}}:{{user_password}}) automaticamente a partir do auth Basic desta request. Rota publica: NAO precisa de sessao/CSRF, basta um usuario ja registrado (rode '2. Register'). O Test salva o token em {{api_token}}, que passa a ser usado no Authorization Bearer de todas as requests."
       },
       "event": [
         {
