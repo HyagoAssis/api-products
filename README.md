@@ -2,7 +2,7 @@
 
 API REST para gerenciamento de **produtos** e **categorias**, construída com **Laravel 13** (PHP 8.5).
 Conta com autenticação via **Laravel Sanctum** (tokens), busca de produtos com **Elasticsearch** (via Laravel Scout),
-filas com **Redis + Horizon** e log de alterações de produtos.
+filas com **Redis + Horizon**, log de alterações de produtos e monitoramento de erros com **Sentry**.
 
 ---
 
@@ -43,6 +43,10 @@ O container `app` roda o PHP-FPM e o **Horizon** juntos, gerenciados pelo Superv
     # ou informando um UID/GID específico:
     # ./project create-envs 1000 1000
     ```
+   > **Sentry (opcional):** preencha o `SENTRY_LARAVEL_DSN` no `.env` com o DSN do seu projeto no Sentry
+   > para ativar o monitoramento de erros. Se deixar **vazio**, o Sentry fica desativado e a API funciona
+   > normalmente. Veja como obter o DSN em
+   > [Monitoramento de erros com Sentry](#-monitoramento-de-erros-com-sentry).
 
 3. Edite o arquivo `hosts` do sistema operacional
     - Tutorial: https://docs.rackspace.com/docs/como-modifico-meus-arquivos-de-hosts
@@ -185,6 +189,36 @@ de fuzziness/relevância do full-text. Assim a indisponibilidade do Elasticsearc
 > Os produtos são indexados automaticamente ao rodar `./project artisan db:seed` (`scout:import`) e o índice
 > é criado no `entrypoint` ao subir o container. Para reindexar manualmente:
 > `./project artisan scout:import "App\Models\Product"`.
+
+### 🛡️ Monitoramento de erros com Sentry
+
+A aplicação está integrada ao **[Sentry](https://sentry.io/)** (via `sentry/sentry-laravel`) para captura de
+exceções e logs. Na prática:
+
+- **Exceções não tratadas** são reportadas automaticamente (`Integration::handles` no `bootstrap/app.php`).
+- **Fallback do Elasticsearch** envia a exceção explicitamente com `\Sentry\captureException()` — assim você
+  fica sabendo toda vez que a busca cai para o banco, mesmo com a API respondendo normalmente.
+- **Logs da aplicação** também sobem para o Sentry pelo canal `sentry_logs`, incluído no stack de log
+  (`LOG_STACK=single,sentry_logs`).
+
+**Configuração:** preencha o `SENTRY_LARAVEL_DSN` no `.env` com o DSN do seu projeto:
+
+```env
+SENTRY_LARAVEL_DSN=https://<sua-chave>@<sua-org>.ingest.us.sentry.io/<id-do-projeto>
+SENTRY_TRACES_SAMPLE_RATE=1.0
+SENTRY_ENABLE_LOGS=true
+```
+
+> Se o `SENTRY_LARAVEL_DSN` ficar **vazio**, o Sentry é automaticamente desativado (nenhum evento é enviado)
+> e a aplicação roda normalmente — ideal para ambientes locais/CI sem telemetria. Como o projeto não usa
+> config cacheada, o DSN pode ser preenchido a qualquer momento e passa a valer na próxima requisição HTTP
+> (para os processos de background — Horizon/scheduler — reinicie o worker com `./project artisan horizon:terminate`).
+
+**Como obter o DSN:** crie uma conta/organização e um projeto **Laravel** no Sentry e copie o DSN gerado.
+Passo a passo na central de ajuda oficial:
+
+- [Getting Started — Laravel (Sentry Docs)](https://docs.sentry.io/platforms/php/guides/laravel/)
+- [Onde encontrar o seu DSN](https://docs.sentry.io/concepts/key-terms/dsn-explainer/#where-to-find-your-dsn)
 
 ### Coleção do Postman
 

@@ -13,7 +13,8 @@
         "laravel/sanctum": "^4.0",
         "laravel/scout": "^11.7",
         "laravel/tinker": "^3.0",
-        "predis/predis": "^3.6"
+        "predis/predis": "^3.6",
+        "sentry/sentry-laravel": "^4.27"
     },
     "require-dev": {
         "barryvdh/laravel-ide-helper": "^3.7",

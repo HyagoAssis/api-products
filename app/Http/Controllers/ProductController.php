@@ -17,6 +17,8 @@ use Illuminate\Http\Response;
 use Symfony\Component\HttpFoundation\Response as ResponseAlias;
 use Throwable;
 
+use function Sentry\captureException;
+
 class ProductController extends Controller
 {
     /**
@@ -53,7 +55,7 @@ class ProductController extends Controller
                 throw $exception;
             }
 
-            report($exception);
+            captureException($exception);
 
             return Product::buildFilteredQuery($params)
                 ->with('category')
