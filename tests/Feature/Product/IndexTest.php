@@ -76,6 +76,17 @@ it('should filter products by the search term', function () {
         ->assertJsonPath('data.0.id', $matching->id);
 });
 
+it('should order exact name matches first', function () {
+    Sanctum::actingAs(User::factory()->create());
+
+    Product::factory()->create(['name' => 'Cabo USB para Notebook']);
+    $exact = Product::factory()->create(['name' => 'Notebook']);
+
+    getJson(route('products.index', ['search' => 'Notebook']))
+        ->assertSuccessful()
+        ->assertJsonPath('data.0.id', $exact->id);
+});
+
 it('should filter products by category', function () {
     Sanctum::actingAs(User::factory()->create());
 

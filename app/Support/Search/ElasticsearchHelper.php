@@ -17,9 +17,15 @@ class ElasticsearchHelper
         if ($params->search) {
             $query->must(
                 Query::multiMatch()
-                    ->fields(['name', 'description', 'category.name'])
+                    ->fields(['name^3', 'description', 'category.name^2'])
                     ->query($params->search)
                     ->fuzziness('AUTO')
+            );
+
+            $query->should(
+                Query::matchPhrase()
+                    ->field('name')
+                    ->query($params->search)
             );
         } else {
             $query->must(Query::matchAll());

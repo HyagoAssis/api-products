@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Jobs\LogProductChangesJob;
+use App\Support\Search\ProductSearchParams;
 use Database\Factories\ProductFactory;
 use Elastic\ScoutDriverPlus\Searchable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -143,6 +144,31 @@ class Product extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    /**
+     * Build an Eloquent query applying the given search filters.
+     *
+     * @return Builder<static>
+     */
+    public static function buildFilteredQuery(ProductSearchParams $params): Builder
+    {
+        return static::query()
+            ->when($params->search, function (Builder $query, string $search): void {
+                $query->filterName($search);
+            })
+            ->when($params->categoryId !== null, function (Builder $query) use ($params): void {
+                $query->filterCategory($params->categoryId);
+            })
+            ->when($params->hasStock, function (Builder $query): void {
+                $query->filterHasStock();
+            })
+            ->when($params->minPrice !== null, function (Builder $query) use ($params): void {
+                $query->filterMinPrice((string) $params->minPrice);
+            })
+            ->when($params->maxPrice !== null, function (Builder $query) use ($params): void {
+                $query->filterMaxPrice((string) $params->maxPrice);
+            });
     }
 
     /**

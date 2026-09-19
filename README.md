@@ -1,60 +1,246 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# API de Produtos
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+API REST para gerenciamento de **produtos** e **categorias**, construída com **Laravel 13** (PHP 8.5).
+Conta com autenticação via **Laravel Sanctum** (tokens), busca de produtos com **Elasticsearch** (via Laravel Scout),
+filas com **Redis + Horizon** e log de alterações de produtos.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 🧱 Stack
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+| Serviço          | Tecnologia                        | Porta |
+|------------------|-----------------------------------|-------|
+| App (PHP-FPM)    | Laravel 13 / PHP 8.5 + Supervisor | —     |
+| Web              | Nginx                             | 80    |
+| Banco de dados   | PostgreSQL 17                     | 5432  |
+| Cache / Filas    | Redis 7.4                         | 6379  |
+| Busca            | Elasticsearch 9.1.2               | 9200  |
+| Visualização     | Kibana 9.1.2                      | 5601  |
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+O container `app` roda o PHP-FPM e o **Horizon** juntos, gerenciados pelo Supervisor.
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## 🚀 Como rodar o projeto localmente com Docker
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### Pré-requisitos
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+- [Docker](https://docs.docker.com/get-docker/)
+- [Docker Compose](https://docs.docker.com/compose/)
 
-## Agentic Development
+### Passo a passo
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+1. Clone o repositório:
+    ```bash
+    git clone git@github.com:HyagoAssis/api-products.git
+    cd api-products
+    ```
+
+2. Crie o arquivo `.env` a partir do `.env.example` (o script também define o `UID`/`GID`
+   usados pelo container `app` para manter as permissões dos arquivos corretas):
+    ```bash
+    ./project create-envs
+    # ou informando um UID/GID específico:
+    # ./project create-envs 1000 1000
+    ```
+
+3. Edite o arquivo `hosts` do sistema operacional
+    - Tutorial: https://docs.rackspace.com/docs/como-modifico-meus-arquivos-de-hosts
+    - Insira a linha abaixo:
+    ```bash
+    127.0.0.1 projeto.site
+    ```
+
+4. Suba os containers da aplicação (a primeira vez pode demorar um pouco):
+    ```bash
+    ./project up
+    ```
+   O `entrypoint` do container já executa automaticamente `composer install`, `php artisan key:generate`,
+   as **migrations** e a criação do **índice do Elasticsearch**. Não é necessário rodar esses passos manualmente.
+
+5. **Popule o banco com dados de exemplo** (usuário de teste, categorias e produtos)
+   e indexe os produtos no Elasticsearch:
+    ```bash
+    ./project artisan db:seed
+    ```
+   O seed cria um usuário de teste e importa os produtos para a busca (`scout:import`):
+    - **E-mail:** `test@example.com`
+    - **Senha:** `password`
+
+6. Pronto! A API estará disponível em `http://projeto.site`.
+    - Kibana (opcional, para inspecionar o Elasticsearch): `http://localhost:5601`
+
+7. Nas próximas vezes, para rodar a aplicação basta subir os containers novamente:
+    ```bash
+    ./project up
+    ```
+
+> **Observações**
+> - Se precisar mudar nomes/portas dos containers, ajuste o `docker-compose.yml`, o `.env`
+>   (`DB_HOST`, `DB_PORT`, etc.) e o arquivo de configuração do Nginx (`docker/nginx/conf.d/app.conf`).
+
+---
+
+## 🛠️ Manual dos scripts (`./project`)
+
+O arquivo `./project` é um wrapper para os comandos mais comuns do dia a dia. Rodar `./project` sem argumentos
+exibe a ajuda. Comandos disponíveis:
+
+| Comando                        | O que faz                                                                                  |
+|--------------------------------|--------------------------------------------------------------------------------------------|
+| `./project up`                 | Sobe todos os containers (`docker compose up -d`).                                          |
+| `./project down`               | Derruba todos os containers.                                                                |
+| `./project prune`              | Derruba containers + volumes + imagem local do projeto (preserva imagens de registry, como postgres/redis). |
+| `./project bash [cmd]`         | Abre um terminal no container `app`. Com argumentos, executa o comando (ex.: `./project bash ls -la`). |
+| `./project test [args]`        | Roda os testes em paralelo (`php artisan test --parallel`). Aceita filtros (ex.: `./project test --filter=ProductTest`). |
+| `./project pint [args]`        | Roda o [Laravel Pint](https://laravel.com/docs/pint) para formatar o código.               |
+| `./project artisan <cmd>`      | Executa um comando Artisan no container (ex.: `./project artisan migrate`, `./project artisan db:seed`). |
+| `./project create-envs [uid] [gid]` | Cria o `.env` a partir do `.env.example` e define `UID`/`GID` (padrão `1000:1000`). Chama `scripts/create_envs.sh`. |
+
+Exemplos rápidos:
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+./project up                       # sobe o ambiente
+./project artisan db:seed          # popula o banco
+./project test                     # roda a suíte de testes
+./project artisan migrate:fresh    # recria o banco
+./project bash                     # entra no container
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+---
 
-## Contributing
+## 🔌 Endpoints da API
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+A autenticação é feita com **Laravel Sanctum**. Primeiro obtenha um token e depois envie-o no
+header `Authorization: Bearer <token>` nas rotas protegidas.
 
-## Code of Conduct
+### Autenticação
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+| Método | Rota                 | Descrição                                                                     |
+|--------|----------------------|-------------------------------------------------------------------------------|
+| POST   | `/api/token/create`  | Gera um token de API a partir de credenciais via **HTTP Basic Auth** (e-mail + senha). |
+| GET    | `/api/user`          | Retorna o usuário autenticado. *(protegida)*                                   |
 
-## Security Vulnerabilities
+> As rotas de `register`, `login`, `logout`, verificação de e-mail e recuperação de senha
+> também estão disponíveis (ver `routes/auth.php`).
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### Recursos (v1) — *rotas protegidas por `auth:sanctum`*
 
-## License
+Prefixo: `/api/v1`
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
-# api-products
-# api-products
+| Método | Rota                      | Descrição                    |
+|--------|---------------------------|------------------------------|
+| GET    | `/api/v1/categories`      | Lista categorias             |
+| POST   | `/api/v1/categories`      | Cria categoria               |
+| GET    | `/api/v1/categories/{id}` | Detalha categoria            |
+| PUT    | `/api/v1/categories/{id}` | Atualiza categoria           |
+| DELETE | `/api/v1/categories/{id}` | Remove categoria             |
+| GET    | `/api/v1/products`        | Lista produtos (com filtros) |
+| POST   | `/api/v1/products`        | Cria produto                 |
+| GET    | `/api/v1/products/{id}`   | Detalha produto              |
+| PUT    | `/api/v1/products/{id}`   | Atualiza produto             |
+| DELETE | `/api/v1/products/{id}`   | Remove produto               |
+
+### Filtros da listagem de produtos
+
+A rota `GET /api/v1/products` aceita os parâmetros de query abaixo. Eles podem ser **combinados** livremente
+(todos são aplicados em conjunto, com lógica "E"):
+
+| Parâmetro     | Tipo    | Descrição                                                                 |
+|---------------|---------|---------------------------------------------------------------------------|
+| `search`      | string  | Texto livre — busca em **nome**, **descrição** e **nome da categoria**.    |
+| `category_id` | int     | Retorna apenas produtos da categoria informada.                           |
+| `has_stock`   | boolean | Quando `true`, retorna apenas produtos com estoque disponível (`stock > 0`). |
+| `min_price`   | number  | Preço mínimo (`price >=`).                                                 |
+| `max_price`   | number  | Preço máximo (`price <=`).                                                 |
+| `page`        | int     | Página atual (paginação).                                                  |
+| `perPage`     | int     | Itens por página (padrão: 15).                                             |
+
+Exemplo:
+
+```http
+GET /api/v1/products?search=teclado&category_id=3&has_stock=true&min_price=50&max_price=300&perPage=20
+```
+
+### 🔎 Diferencial da busca com Elasticsearch
+
+A listagem de produtos usa **Elasticsearch** (via [Laravel Scout](https://laravel.com/docs/scout) +
+`elastic-scout-driver-plus`) em vez de uma consulta `LIKE` tradicional no banco. Na prática, isso traz:
+
+- **Busca full-text em múltiplos campos** — o `search` é um `multi_match` sobre `name`, `description` e
+  `category.name` ao mesmo tempo, e não apenas uma coluna.
+- **Tolerância a erros de digitação (fuzziness `AUTO`)** — buscar por `"tecaldo"` ainda encontra `"teclado"`.
+  Uma busca `LIKE` no banco não faria isso.
+- **Relevância (scoring)** — os resultados vêm ordenados pela relevância do texto (parte `must` da query),
+  enquanto categoria, estoque e faixa de preço entram como `filter` — ou seja, restringem o resultado **sem
+  distorcer o score**, e ainda se beneficiam do cache de filtros do Elasticsearch.
+- **Índice dedicado** — os produtos são indexados no Elasticsearch (com a categoria já embutida no documento,
+  via `toSearchableArray`), o que mantém a busca rápida mesmo com a base crescendo.
+
+**Fallback automático para o banco:** se o Elasticsearch estiver indisponível (`TransportException`), o
+controller captura o erro, registra o log e cai automaticamente para uma busca equivalente no **PostgreSQL**
+(`Product::buildFilteredQuery`), usando os mesmos filtros. A API continua respondendo — apenas sem os recursos
+de fuzziness/relevância do full-text. Assim a indisponibilidade do Elasticsearch **não derruba** o endpoint.
+
+> Os produtos são indexados automaticamente ao rodar `./project artisan db:seed` (`scout:import`) e o índice
+> é criado no `entrypoint` ao subir o container. Para reindexar manualmente:
+> `./project artisan scout:import "App\Models\Product"`.
+
+### Coleção do Postman
+
+Uma coleção com as chamadas de autenticação está disponível em
+[`postman/api-products-auth.postman_collection.json`](postman/api-products-auth.postman_collection.json).
+
+---
+
+## 🧪 Testes
+
+Os testes rodam dentro do container `app`:
+
+```bash
+./project test                          # toda a suíte (em paralelo)
+./project test --filter=ProductTest     # um teste específico
+```
+
+---
+
+## 📂 Organização
+
+```bash
+api-products/
+├── app/
+│   ├── Http/
+│   │   └── Controllers/
+│   │       ├── Auth/                    # Controllers de autenticação
+│   │       ├── CategoryController.php   # CRUD de categorias
+│   │       ├── ProductController.php    # CRUD de produtos
+│   │       └── TokenManagerController.php # Emissão de tokens (Basic Auth)
+│   ├── Models/
+│   │   ├── Category.php                 # Model de categorias
+│   │   ├── Product.php                  # Model de produtos (Searchable via Scout)
+│   │   ├── User.php                     # Model de usuários
+│   │   └── UserLog.php                  # Log de alterações
+│   └── Support/
+│       ├── MorphRelation.php
+│       └── Search/                      # Helpers de busca (Elasticsearch/DB) e parâmetros
+├── database/
+│   ├── factories/                       # Factories dos models
+│   ├── migrations/                      # Migrations
+│   └── seeders/                         # DatabaseSeeder, CategorySeeder, ProductSeeder
+├── routes/
+│   ├── api.php                          # Rotas da API (tokens + recursos v1)
+│   └── auth.php                         # Rotas de autenticação
+├── tests/
+│   └── Feature/                         # Testes de feature
+├── docker/
+│   ├── Dockerfile                       # Imagem do container app (PHP-FPM + Horizon)
+│   ├── entrypoint.sh                    # Setup automático ao subir o container
+│   ├── supervisord.conf                 # Configuração do Supervisor
+│   ├── nginx/                           # Configurações do Nginx
+│   └── php/                             # Configurações do PHP
+├── scripts/
+│   └── create_envs.sh                   # Criação do .env + UID/GID
+├── postman/                             # Coleção do Postman
+├── docker-compose.yml                   # Definição dos serviços
+└── project                              # Wrapper de comandos do dia a dia
+```
