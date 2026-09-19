@@ -26,7 +26,7 @@ class CategoryController extends Controller
                 $query->filterName($search);
             })
             ->paginate(
-                perPage: $request->integer('perPage'),
+                perPage: $request->integer('per_page'),
                 page: $request->integer('page'),
             );
 

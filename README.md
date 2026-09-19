@@ -158,12 +158,12 @@ A rota `GET /api/v1/products` aceita os parâmetros de query abaixo. Eles podem 
 | `min_price`   | number  | Preço mínimo (`price >=`).                                                 |
 | `max_price`   | number  | Preço máximo (`price <=`).                                                 |
 | `page`        | int     | Página atual (paginação).                                                  |
-| `perPage`     | int     | Itens por página (padrão: 15).                                             |
+| `per_page`    | int     | Itens por página (padrão: 15).                                             |
 
 Exemplo:
 
 ```http
-GET /api/v1/products?search=teclado&category_id=3&has_stock=true&min_price=50&max_price=300&perPage=20
+GET /api/v1/products?search=teclado&category_id=3&has_stock=true&min_price=50&max_price=300&per_page=20
 ```
 
 ### 🔎 Diferencial da busca com Elasticsearch

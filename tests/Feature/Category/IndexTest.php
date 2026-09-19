@@ -18,12 +18,12 @@ it('should be able to list categories with the correct data', function () {
         ->assertJsonPath('data.0.description', $category->description);
 });
 
-it('should paginate using the custom perPage and page parameters', function () {
+it('should paginate using the custom per_page and page parameters', function () {
     Sanctum::actingAs(User::factory()->create());
 
     Category::factory()->count(15)->create();
 
-    $response = getJson(route('categories.index', ['perPage' => 5, 'page' => 2]));
+    $response = getJson(route('categories.index', ['per_page' => 5, 'page' => 2]));
 
     $response->assertSuccessful()
         ->assertJsonCount(5, 'data')

@@ -22,7 +22,7 @@ class IndexRequest extends FormRequest
     {
         $this->merge([
             'page' => $this->input('page', 1),
-            'perPage' => $this->input('perPage', 15),
+            'per_page' => $this->input('per_page', 15),
         ]);
     }
 
@@ -35,7 +35,7 @@ class IndexRequest extends FormRequest
     {
         return [
             'page' => ['integer', 'min:1'],
-            'perPage' => ['integer', 'min:1'],
+            'per_page' => ['integer', 'min:1'],
             'search' => ['nullable', 'string'],
         ];
     }

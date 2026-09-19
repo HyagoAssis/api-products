@@ -49,12 +49,12 @@ it('should be able to list products with the correct data', function () {
         ->assertJsonPath('data.0.stock', $product->stock);
 });
 
-it('should paginate using the custom perPage and page parameters', function () {
+it('should paginate using the custom per_page and page parameters', function () {
     Sanctum::actingAs(User::factory()->create());
 
     Product::factory()->count(15)->create();
 
-    $response = getJson(route('products.index', ['perPage' => 5, 'page' => 2]));
+    $response = getJson(route('products.index', ['per_page' => 5, 'page' => 2]));
 
     $response->assertSuccessful()
         ->assertJsonCount(5, 'data')
