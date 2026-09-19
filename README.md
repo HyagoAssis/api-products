@@ -166,7 +166,7 @@ Exemplo:
 GET /api/v1/products?search=teclado&category_id=3&has_stock=true&min_price=50&max_price=300&per_page=20
 ```
 
-### 🔎 Diferencial da busca com Elasticsearch
+### 🔎 Busca com Elasticsearch
 
 A listagem de produtos usa **Elasticsearch** (via [Laravel Scout](https://laravel.com/docs/scout) +
 `elastic-scout-driver-plus`) em vez de uma consulta `LIKE` tradicional no banco. Na prática, isso traz:
@@ -220,14 +220,20 @@ Passo a passo na central de ajuda oficial:
 - [Getting Started — Laravel (Sentry Docs)](https://docs.sentry.io/platforms/php/guides/laravel/)
 - [Onde encontrar o seu DSN](https://docs.sentry.io/concepts/key-terms/dsn-explainer/#where-to-find-your-dsn)
 
-### Coleção do Postman
-
-Uma coleção com as chamadas de autenticação está disponível em
-[`postman/api-products-auth.postman_collection.json`](postman/api-products-auth.postman_collection.json).
-
 ---
 
 ## 🧪 Testes
+
+A suíte é escrita com **[Pest](https://pestphp.com/) 4** (rodando sobre o **PHPUnit 12**), cobrindo
+autenticação, CRUD de produtos e categorias, filtros/paginação, disparo dos logs em Job e o fallback
+da busca (Elasticsearch → banco). São **79 testes / 227 asserts**, executados em paralelo.
+
+### Testes com Pest
+
+A escolha do **Pest** se deve à sintaxe mais expressiva e legível — os cenários são descritos com
+`it('should ...')` e helpers como `postJson`/`assertDatabaseHas`, deixando claro o comportamento
+esperado sem o boilerplate de classes. Como o Pest roda **em cima do PHPUnit**, mantém total
+compatibilidade com o ecossistema (mesmo runner, mesmas asserts, mesmo `php artisan test`).
 
 Os testes rodam dentro do container `app`:
 
@@ -235,6 +241,17 @@ Os testes rodam dentro do container `app`:
 ./project test                          # toda a suíte (em paralelo)
 ./project test --filter=ProductTest     # um teste específico
 ```
+
+---
+
+## 📮 Coleção do Postman
+
+Uma coleção com **todos os endpoints da API** está disponível em
+[`api-products-collection.postman_collection.json`](api-products-collection.postman_collection.json).
+Ela cobre a autenticação (CSRF/sessão e emissão de token Bearer) e o CRUD completo de **categorias** e
+**produtos** — todas as rotas podem ser testadas por lá. Importe o arquivo no Postman e rode
+**`6. Create Token`** (ou o fluxo de sessão) para autenticar; o token fica salvo em `{{api_token}}` e é
+enviado automaticamente nas demais requisições.
 
 ---
 
@@ -274,7 +291,7 @@ api-products/
 │   └── php/                             # Configurações do PHP
 ├── scripts/
 │   └── create_envs.sh                   # Criação do .env + UID/GID
-├── postman/                             # Coleção do Postman
+├── api-products-collection.postman_collection.json  # Coleção do Postman (todos os endpoints)
 ├── docker-compose.yml                   # Definição dos serviços
 └── project                              # Wrapper de comandos do dia a dia
 ```
