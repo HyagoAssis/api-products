@@ -27,7 +27,7 @@ O container `app` roda o PHP-FPM e o **Horizon** juntos, gerenciados pelo Superv
 
 - [Git](https://git-scm.com/)
 - [Docker](https://docs.docker.com/get-docker/)
-- [Docker Compose v2](https://docs.docker.com/compose/) (já incluso no Docker recente)
+- [Docker Compose](https://docs.docker.com/compose/)
 
 ### Passo a passo
 
