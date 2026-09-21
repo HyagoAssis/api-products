@@ -15,7 +15,7 @@ filas com **Redis + Horizon**, log de alterações de produtos e monitoramento d
 | Banco de dados   | PostgreSQL 17                     | 5432  |
 | Cache / Filas    | Redis 7.4                         | 6379  |
 | Busca            | Elasticsearch 9.1.2               | 9200  |
-| Visualização     | Kibana 9.1.2                      | 5601  |
+| Visualização     | Kibana 9.1.2 _(opcional)_         | 5601  |
 
 O container `app` roda o PHP-FPM e o **Horizon** juntos, gerenciados pelo Supervisor.
 
@@ -73,7 +73,6 @@ O container `app` roda o PHP-FPM e o **Horizon** juntos, gerenciados pelo Superv
     - **Senha:** `password`
 
 6. Pronto! A API estará disponível em `http://projeto.site`.
-    - Kibana (opcional, para inspecionar o Elasticsearch): `http://localhost:5601`
 
 7. Nas próximas vezes, para rodar a aplicação basta subir os containers novamente:
     ```bash
@@ -84,6 +83,19 @@ O container `app` roda o PHP-FPM e o **Horizon** juntos, gerenciados pelo Superv
 > - Se precisar mudar nomes/portas dos containers, ajuste o `docker-compose.yml`, o `.env`
 >   (`DB_HOST`, `DB_PORT`, etc.) e o arquivo de configuração do Nginx (`docker/nginx/conf.d/app.conf`).
 
+### Kibana (opcional)
+
+O Kibana serve apenas para **inspecionar visualmente o Elasticsearch** e **não é necessário** para a API
+funcionar. Por isso ele fica atrás do profile `kibana` e **não sobe** com o `./project up` comum.
+
+Para subir o ambiente **com** o Kibana:
+
+```bash
+./project up-kibana
+```
+
+Ele ficará disponível em `http://localhost:5601`.
+
 ---
 
 ## 🛠️ Manual dos scripts (`./project`)
@@ -91,16 +103,18 @@ O container `app` roda o PHP-FPM e o **Horizon** juntos, gerenciados pelo Superv
 O arquivo `./project` é um wrapper para os comandos mais comuns do dia a dia. Rodar `./project` sem argumentos
 exibe a ajuda. Comandos disponíveis:
 
-| Comando                        | O que faz                                                                                  |
-|--------------------------------|--------------------------------------------------------------------------------------------|
-| `./project up`                 | Sobe todos os containers (`docker compose up -d`).                                          |
-| `./project down`               | Derruba todos os containers.                                                                |
-| `./project prune`              | Derruba containers + volumes + imagem local do projeto (preserva imagens de registry, como postgres/redis). |
-| `./project bash [cmd]`         | Abre um terminal no container `app`. Com argumentos, executa o comando (ex.: `./project bash ls -la`). |
+| Comando                        | O que faz                                                                                                                |
+|--------------------------------|--------------------------------------------------------------------------------------------------------------------------|
+| `./project up`                 | Sobe todos os containers, **exceto o Kibana** (`docker compose up -d`).                                                  |
+| `./project up-kibana`          | Sobe todos os containers **incluindo o Kibana**.                                               |
+| `./project down`               | Derruba todos os containers.                                                                                             |
+| `./project prune`              | Derruba containers + volumes + imagem local do projeto (preserva imagens de registry, como postgres/redis).              |
+| `./project prune-all`          | Derruba containers + volumes + **todas** as imagens, inclusive as de registry (postgres/redis/nginx/elasticsearch/kibana). |
+| `./project bash [cmd]`         | Abre um terminal no container `app`. Com argumentos, executa o comando (ex.: `./project bash ls -la`).                   |
 | `./project test [args]`        | Roda os testes em paralelo (`php artisan test --parallel`). Aceita filtros (ex.: `./project test --filter=ProductTest`). |
-| `./project pint [args]`        | Roda o [Laravel Pint](https://laravel.com/docs/pint) para formatar o código.               |
-| `./project artisan <cmd>`      | Executa um comando Artisan no container (ex.: `./project artisan migrate`, `./project artisan db:seed`). |
-| `./project create-envs [uid] [gid]` | Cria o `.env` a partir do `.env.example` e define `UID`/`GID` (padrão `1000:1000`). Chama `scripts/create_envs.sh`. |
+| `./project pint [args]`        | Roda o [Laravel Pint](https://laravel.com/docs/pint) para formatar o código.                                             |
+| `./project artisan <cmd>`      | Executa um comando Artisan no container (ex.: `./project artisan migrate`, `./project artisan db:seed`).                 |
+| `./project create-envs [uid] [gid]` | Cria o `.env` a partir do `.env.example` e define `UID`/`GID` (padrão `1000:1000`). Chama `scripts/create_envs.sh`.      |
 
 Exemplos rápidos:
 

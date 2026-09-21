@@ -90,6 +90,8 @@ services:
   kibana:
     image: kibana:9.1.2
     container_name: api-products-kibana
+    profiles:
+      - kibana
     depends_on:
       - elasticsearch
     environment:

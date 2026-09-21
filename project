@@ -10,11 +10,17 @@ case "$COMMAND" in
   up)
     docker compose up -d
     ;;
+  up-kibana)
+    docker compose --profile kibana up -d
+    ;;
   down)
-    docker compose down
+    docker compose --profile kibana down
     ;;
   prune)
-    docker compose down --rmi local --volumes --remove-orphans
+    docker compose --profile kibana down --rmi local --volumes --remove-orphans
+    ;;
+  prune-all)
+    docker compose --profile kibana down --rmi all --volumes --remove-orphans
     ;;
   bash)
     shift
@@ -43,9 +49,11 @@ case "$COMMAND" in
   *)
     echo "Docker Scripts"
     echo "Uso:"
-    echo " $0 up                 → sobe todos os containers (docker compose up -d)"
+    echo " $0 up                 → sobe todos os containers, exceto o Kibana (docker compose up -d)"
+    echo " $0 up-kibana          → sobe todos os containers incluindo o Kibana (profile kibana)"
     echo " $0 down               → derruba todos os containers"
     echo " $0 prune              → derruba containers + volumes + imagem local do projeto (preserva imagens de registry como postgres/redis)"
+    echo " $0 prune-all          → derruba containers + volumes + TODAS as imagens, inclusive as de registry (postgres/redis/nginx/elasticsearch/kibana)"
     echo " $0 bash [cmd]         → terminal do container app; com args, executa o comando (ex.: $0 bash ls -la)"
     echo " $0 test [args]        → roda os testes em paralelo (php artisan test --parallel)"
     echo " $0 pint [args]        → roda o Pint (formata o codigo)"

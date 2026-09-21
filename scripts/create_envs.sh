@@ -14,26 +14,18 @@ EXAMPLE_FILE="${ROOT_DIR}/.env.example"
 echo "Criando ${ENV_FILE}..."
 
 if [ -f "${ENV_FILE}" ]; then
-    echo ".env já existe, mantendo o arquivo atual."
+    echo ".env já existe, substituindo pelo .env.example."
 else
-    cp "${EXAMPLE_FILE}" "${ENV_FILE}"
     echo ".env criado a partir de .env.example."
 fi
 
-# Garante UID/GID no .env (usados pelo docker-compose para o serviço app).
-set_env_var() {
-    local key="$1"
-    local value="$2"
+cp "${EXAMPLE_FILE}" "${ENV_FILE}"
 
-    if grep -q "^${key}=" "${ENV_FILE}"; then
-        sed -i "s/^${key}=.*/${key}=${value}/" "${ENV_FILE}"
-    else
-        printf '\n%s=%s\n' "${key}" "${value}" >> "${ENV_FILE}"
-    fi
-}
-
-set_env_var "UID" "${SCRIPT_UID}"
-set_env_var "GID" "${SCRIPT_GID}"
+# UID/GID usados pelo docker-compose para o serviço app.
+{
+    printf '\nUID=%s\n' "${SCRIPT_UID}"
+    printf 'GID=%s\n' "${SCRIPT_GID}"
+} >> "${ENV_FILE}"
 
 echo "UID=${SCRIPT_UID} e GID=${SCRIPT_GID} definidos no .env."
 echo "Pronto."

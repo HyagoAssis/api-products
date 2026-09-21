@@ -10,47 +10,37 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git unzip zip curl \
     procps \
     supervisor \
-    postgresql-client \
-    libpng-dev libonig-dev libxml2-dev libzip-dev libjpeg-dev libfreetype6-dev \
-    libicu-dev libpq-dev libgmp-dev
+    libzip-dev \
+    libicu-dev libpq-dev
 
 # ─────────────────────────────
 # 2. Extensões PHP nativas
 # ─────────────────────────────
 RUN docker-php-ext-install \
-    bcmath \
     pdo_pgsql \
-    exif \
     pcntl \
     zip \
-    intl \
-    gmp
+    intl
 
 # ─────────────────────────────
-# 3. Extensões com configuração especial
-# ─────────────────────────────
-RUN docker-php-ext-configure gd --with-jpeg --with-freetype \
-    && docker-php-ext-install gd
-
-# ─────────────────────────────
-# 4. Redis (phpredis)
+# 3. Redis (phpredis)
 # ─────────────────────────────
 RUN pecl install redis \
     && docker-php-ext-enable redis
 
 # ─────────────────────────────
-# 5. Composer
+# 4. Composer
 # ─────────────────────────────
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 # ─────────────────────────────
-# 6. Limpeza de pacotes temporários
+# 5. Limpeza de pacotes temporários
 # ─────────────────────────────
 RUN apt-get autoremove -y && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # ─────────────────────────────
-# 7. Configuração do php.ini (development como base)
+# 6. Configuração do php.ini (development como base)
 # ─────────────────────────────
 RUN for INI in "$PHP_INI_DIR/php.ini-development" "$PHP_INI_DIR/php.ini-production"; do \
       sed -i \
@@ -72,7 +62,7 @@ RUN for INI in "$PHP_INI_DIR/php.ini-development" "$PHP_INI_DIR/php.ini-producti
 COPY docker/php/opcache.ini $PHP_INI_DIR/conf.d/opcache.ini
 
 # ─────────────────────────────
-# 8. Ajuste do pool FPM (tuning)
+# 7. Ajuste do pool FPM (tuning)
 # ─────────────────────────────
 RUN { \
       echo 'pm = dynamic'; \
@@ -84,7 +74,7 @@ RUN { \
     } >> /usr/local/etc/php-fpm.d/zz-docker.conf
 
 # ─────────────────────────────
-# 9. Wrapper do php CLI (carrega cli.ini)
+# 8. Wrapper do php CLI (carrega cli.ini)
 # ─────────────────────────────
 COPY docker/php/cli.ini /usr/local/etc/php/cli/conf.d/99-cli.ini
 RUN mv /usr/local/bin/php /usr/local/bin/php.real
@@ -92,7 +82,7 @@ COPY docker/php/php-cli /usr/local/bin/php
 RUN chmod +x /usr/local/bin/php
 
 # ─────────────────────────────
-# 10. Usuário www sincronizado com UID/GID do host
+# 9. Usuário www sincronizado com UID/GID do host
 # ─────────────────────────────
 RUN if getent group ${GID}; then \
       group_name=$(getent group ${GID} | cut -d: -f1); \
@@ -108,7 +98,7 @@ RUN if getent group ${GID}; then \
 WORKDIR /var/www/html
 
 # ─────────────────────────────
-# 11. Entrypoint + Supervisor (php-fpm + horizon)
+# 10. Entrypoint + Supervisor (php-fpm + horizon)
 # ─────────────────────────────
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
