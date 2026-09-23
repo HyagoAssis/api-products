@@ -99,6 +99,7 @@ class Product extends Model
     protected function casts(): array
     {
         return [
+            'price' => 'decimal:2',
             'category_id' => 'integer',
             'stock' => 'integer',
         ];
